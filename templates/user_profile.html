@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Профиль {{ user.username }}</title>
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --card-bg: white;
+            --text-color: #1c1e21;
+            --text-secondary: #65676b;
+            --border-color: #ced0d4;
+            --primary-blue: #0084ff;
+        }
+        body.dark-theme {
+            --bg-color: #18191a;
+            --card-bg: #242526;
+            --text-color: #e4e6eb;
+            --text-secondary: #b0b3b8;
+            --border-color: #3e4042;
+            --primary-blue: #0084ff;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            transition: background 0.3s ease;
+        }
+
+        .profile-card {
+            background: var(--card-bg);
+            width: 100%;
+            max-width: 500px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            overflow: hidden;
+            text-align: center;
+            position: relative;
+        }
+
+        /* Кнопка назад */
+        .back-btn {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+        }
+        .back-btn:hover { background: rgba(0,0,0,0.7); }
+
+        /* Большое фото профиля */
+        .large-avatar-container {
+            width: 100%;
+            height: 300px;
+            background: #ddd;
+            position: relative;
+        }
+        .large-avatar {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .profile-info {
+            padding: 30px 20px;
+        }
+
+        .profile-name {
+            font-size: 28px;
+            font-weight: bold;
+            margin: 0 0 10px 0;
+            color: var(--text-color);
+        }
+
+        .profile-status {
+            font-size: 16px;
+            font-weight: 500;
+        }
+        .status-online { color: #4CAF50; }
+        .status-offline { color: var(--text-secondary); }
+
+        .action-buttons {
+            margin-top: 25px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .btn-action {
+            padding: 10px 25px;
+            border-radius: 20px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 15px;
+            transition: 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: var(--primary-blue);
+            color: white;
+        }
+        .btn-primary:hover { opacity: 0.9; }
+
+        .btn-secondary {
+            background: #e4e6eb;
+            color: #1c1e21;
+        }
+        body.dark-theme .btn-secondary { background: #3a3b3c; color: #e4e6eb; }
+        .btn-secondary:hover { background: #d8dadf; }
+
+    </style>
+</head>
+<body>
+
+<div class="profile-card">
+    <!-- Кнопка назад -->
+    <a href="/profile" class="back-btn">←</a>
+
+    <!-- Большое фото -->
+    <div class="large-avatar-container">
+        <img src="{{ user.avatar if user.avatar else ('https://via.placeholder.com/300?text=' ~ user.username[0]|upper) }}" alt="{{ user.username }}" class="large-avatar">
+    </div>
+
+    <div class="profile-info">
+        <!-- Имя -->
+        <h1 class="profile-name">{{ user.username }}</h1>
+        <div style="color: var(--primary-blue); font-weight: 700; margin-bottom: 8px;">{{ user.tag if user.tag else '@' ~ user.username }}</div>
+
+        <!-- Статус -->
+        <div class="profile-status" style="color: {{ status_color if status_color else '#888' }}">
+            {{ status_text if status_text else 'оффлайн' }}
+        </div>
+
+        {% if user.bio %}
+        <p style="margin: 12px 0 0; color: var(--text-secondary);">{{ user.bio }}</p>
+        {% endif %}
+
+        <div style="display:flex; justify-content:center; gap:12px; flex-wrap:wrap; margin-top:18px;">
+            <div style="background: var(--input-bg); border:1px solid var(--border-color); border-radius:12px; padding:12px 16px; min-width:140px;">
+                <div style="font-size:12px; color: var(--text-secondary);">Регистрация</div>
+                <div style="font-weight:700; margin-top:4px;">{{ user.created_at.split(' ')[0] if user.created_at else '—' }}</div>
+            </div>
+            <div style="background: var(--input-bg); border:1px solid var(--border-color); border-radius:12px; padding:12px 16px; min-width:140px;">
+                <div style="font-size:12px; color: var(--text-secondary);">Создал групп</div>
+                <div style="font-weight:700; margin-top:4px;">{{ groups_created }}</div>
+            </div>
+            <div style="background: var(--input-bg); border:1px solid var(--border-color); border-radius:12px; padding:12px 16px; min-width:140px;">
+                <div style="font-size:12px; color: var(--text-secondary);">В группах</div>
+                <div style="font-weight:700; margin-top:4px;">{{ groups_joined }}</div>
+            </div>
+        </div>
+
+        <!-- Кнопки действий -->
+        <div class="action-buttons">
+            <!-- Кнопка написать личное сообщение (если это не вы сами) -->
+            {% if current_user and current_user.username != user.username %}
+            <button class="btn-action btn-primary" onclick="startPrivateChat('{{ user.username }}')">Написать сообщение</button>
+            {% endif %}
+
+            <a href="/profile" class="btn-action btn-secondary">К новостям</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Применяем тему
+    const currentTheme = localStorage.getItem('theme');
+    if (currentTheme) document.body.classList.add(currentTheme);
+
+    // Функция для перехода в личный чат (использует тот же механизм, что и в dashboard)
+    function startPrivateChat(username) {
+        // Перенаправляем на дашборд с параметром, чтобы сразу открыть ЛС,
+        // или можно реализовать открытие через JS, если страница встроена.
+        // Для простоты перенаправим на дашборд, где есть логика открытия ЛС по клику,
+        // но так как это отдельная страница, лучше просто перейти в дашборд.
+
+        // Вариант 1: Просто переход в дашборд (пользователь сам найдет чат)
+        window.location.href = '/dashboard';
+
+        // Вариант 2 (Продвинутый): Если бы мы хотели сразу открыть чат, нам нужно было бы
+        // сохранить username в sessionStorage и обработать его в dashboard.html при загрузке.
+        // Но для сейчас сделаем простой переход.
+    }
+</script>
+
+</body>
+</html>

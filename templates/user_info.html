@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <!-- ВАЖНО ДЛЯ МОБИЛЬНЫХ -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Личные данные</title>
+    <!-- Подключаем библиотеку для сканирования QR-кодов -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <style>
+        /* --- ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ТЕМЫ (Светлая по умолчанию - ПРОФЕССИОНАЛЬНАЯ) --- */
+        :root {
+            --bg-color: #f0f2f5; /* Светло-серый фон как в FB/VK */
+            --card-bg: white;
+            --text-color: #1c1e21;
+            --text-secondary: #65676b;
+            --border-color: #ced0d4;
+            --input-bg: #f0f2f5;
+            --modal-overlay: rgba(0,0,0,0.5);
+            --primary-blue: #0084ff;
+        }
+
+        /* --- НАСТРОЙКИ ТЕМНОЙ ТЕМЫ --- */
+        body.dark-theme {
+            --bg-color: #18191a;
+            --card-bg: #242526;
+            --text-color: #e4e6eb;
+            --text-secondary: #b0b3b8;
+            --border-color: #3e4042;
+            --input-bg: #3a3b3c;
+            --modal-overlay: rgba(0,0,0,0.8);
+            --primary-blue: #0084ff;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: var(--bg-color);
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100vh; margin: 0;
+            color: var(--text-color);
+            transition: background 0.3s ease;
+            padding: 20px; /* Отступ для мобильных, чтобы контент не прилипал к краям */
+            box-sizing: border-box;
+        }
+
+        .profile-card {
+            background: var(--card-bg); padding: 40px; border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center;
+            width: 100%; max-width: 380px; position: relative;
+            color: var(--text-color);
+            transition: background 0.3s ease, color 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        h2 { margin: 10px 0 20px; color: var(--text-color); font-size: 24px; }
+
+        /* Стили для кнопки сканера */
+        .qr-scanner-btn,
+        .profile-menu-btn {
+            position: absolute;
+            top: 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+            opacity: 0.6;
+            z-index: 10;
+        }
+        .qr-scanner-btn:hover,
+        .profile-menu-btn:hover {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+        .qr-scanner-btn svg,
+        .profile-menu-btn svg {
+            width: 28px;
+            height: 28px;
+            fill: var(--primary-blue);
+        }
+        .profile-menu-btn {
+            right: 60px;
+        }
+        .profile-qr-modal {
+            display: none;
+            position: fixed;
+            z-index: 2100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.75);
+            backdrop-filter: blur(6px);
+        }
+        .profile-qr-content {
+            background-color: var(--card-bg);
+            margin: 6% auto;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+            width: 94%;
+            max-width: 520px;
+            border-radius: 18px;
+            position: relative;
+            color: var(--text-color);
+        }
+        .close-profile-qr {
+            color: var(--text-secondary);
+            position: absolute;
+            top: 16px;
+            right: 18px;
+            font-size: 26px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close-profile-qr:hover {
+            color: var(--text-color);
+        }
+        .qr-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .qr-user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .qr-mini-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--border-color);
+            background: #ddd;
+        }
+        .qr-user-text {
+            text-align: left;
+        }
+        .qr-user-name {
+            font-weight: 700;
+            font-size: 16px;
+            margin-bottom: 2px;
+        }
+        .qr-user-subtitle {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+        .qr-thumb-button {
+            background: none;
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 8px;
+            cursor: pointer;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+        .qr-thumb-button:hover {
+            transform: scale(1.02);
+            border-color: var(--primary-blue);
+        }
+        .qr-thumb-button img {
+            width: 72px;
+            height: 72px;
+            display: block;
+            border-radius: 16px;
+        }
+        .share-action {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 10px 14px;
+            margin-bottom: 14px;
+            cursor: pointer;
+            background: var(--input-bg);
+        }
+        .share-action:hover {
+            background: rgba(0,132,255,0.08);
+        }
+        .share-action span {
+            font-size: 14px;
+            color: var(--text-color);
+            font-weight: 600;
+        }
+        .share-action .share-icon {
+            width: 22px;
+            height: 22px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .tab-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 10px 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            color: var(--text-secondary);
+            background: var(--input-bg);
+            transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+        }
+        .tab-active {
+            background: var(--primary-blue);
+            color: white;
+            border-color: var(--primary-blue);
+        }
+        .tab-panel {
+            display: none;
+        }
+        .tab-panel.active {
+            display: block;
+        }
+        .qr-large {
+            width: 100%;
+            max-width: 320px;
+            margin: 0 auto 12px;
+            display: block;
+            border-radius: 18px;
+            border: 1px solid var(--border-color);
+        }
+        .qr-link-box {
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 12px;
+            word-break: break-all;
+            font-size: 14px;
+            color: var(--text-color);
+        }
+        .qr-action-text {
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin-top: 10px;
+        }
+        #reader {
+            width: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-top: 10px;
+            min-height: 320px;
+            background: #000;
+        }
+        #scan-result {
+            margin-top: 14px;
+            font-weight: 700;
+            color: #28a745;
+            word-break: break-all;
+        }
+
+        /* Стили для аватарки */
+        .avatar-container {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 20px;
+        }
+        .avatar-img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid var(--card-bg);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            background-color: #ddd;
+        }
+        .upload-label {
+            display: block;
+            margin-top: 10px;
+            margin-bottom: 20px;
+            color: var(--primary-blue);
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            padding: 10px; /* Увеличена область клика */
+        }
+        .upload-label:hover {
+            text-decoration: underline;
+        }
+
+        .info-box {
+            background: var(--input-bg);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            text-align: left;
+            border: 1px solid transparent;
+            transition: background 0.3s ease;
+        }
+
+        .profile-summary {
+            background: rgba(0,0,0,0.03);
+            padding: 16px;
+            border-radius: 14px;
+            text-align: left;
+            margin: 20px 0 10px;
+            border: 1px solid var(--border-color);
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .summary-row:last-child { border-bottom: none; }
+        .summary-label { color: var(--text-secondary); font-weight: 700; }
+        .summary-value { color: var(--text-color); }
+
+        .text-input, .text-area {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: var(--card-bg);
+            color: var(--text-color);
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        .text-area { min-height: 100px; resize: vertical; }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .info-row:last-child { border-bottom: none; }
+
+        .info-label { font-weight: bold; color: var(--text-secondary); font-size: 14px; }
+        .info-value { color: var(--text-color); font-size: 15px; }
+
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 13px;
+        }
+        .alert-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 13px;
+        }
+        body.dark-theme .alert-success { background-color: #1e4620; color: #d1e7dd; }
+        body.dark-theme .alert-error { background-color: #421818; color: #f5c2c7; }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            text-align: center;
+            border: none;
+            cursor: pointer;
+            transition: 0.3s;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+        .btn:hover { opacity: 0.9; }
+
+        .btn-change { background: #e4e6eb; color: #1c1e21; }
+        .btn-save { background: var(--primary-blue); color: white; }
+        .btn-back { background: #e4e6eb; color: #1c1e21; }
+        .btn-logout { background: #fff; color: #1c1e21; border: 1px solid var(--border-color); }
+
+        body.dark-theme .btn-change { background: #3a3b3c; color: #e4e6eb; }
+        body.dark-theme .btn-back { background: #3a3b3c; color: #e4e6eb; }
+        body.dark-theme .btn-logout { background: #3a3b3c; color: #e4e6eb; border-color: #3e4042; }
+
+        .edit-password-form {
+            margin-top: 15px;
+            display: none;
+            padding-top: 15px;
+            border-top: 1px dashed var(--border-color);
+        }
+
+        input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            box-sizing: border-box;
+            font-size: 14px;
+            background: var(--input-bg);
+            color: var(--text-color);
+            transition: background 0.3s ease, border-color 0.3s ease;
+        }
+        input[type="password"]:focus {
+            border-color: var(--primary-blue);
+            outline: none;
+        }
+
+        /* Стили переключателя темы */
+        .theme-switch-wrapper {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 20px; padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .theme-switch {
+            display: inline-block; height: 24px; position: relative; width: 44px;
+            flex-shrink: 0; /* Чтобы переключатель не сжимался */
+        }
+        .theme-switch input { display:none; }
+        .slider {
+            background-color: #ccc; bottom: 0; cursor: pointer; left: 0;
+            position: absolute; right: 0; top: 0; transition: .4s; border-radius: 34px;
+        }
+        .slider:before {
+            background-color: white; bottom: 3px; content: ""; height: 18px;
+            left: 3px; position: absolute; transition: .4s; width: 18px; border-radius: 50%;
+        }
+        input:checked + .slider { background-color: var(--primary-blue); }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        /* --- Стили для модального окна сканера --- */
+        .scanner-modal {
+            display: none; /* Скрыто по умолчанию */
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.8);
+            backdrop-filter: blur(5px);
+        }
+        .scanner-modal-content {
+            background-color: var(--card-bg);
+            margin: 10% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 90%;
+            max-width: 500px;
+            border-radius: 15px;
+            text-align: center;
+            position: relative;
+            color: var(--text-color);
+        }
+        .close-scanner {
+            color: var(--text-secondary);
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            position: absolute;
+            top: 10px;
+            right: 20px;
+        }
+        .close-scanner:hover,
+        .close-scanner:focus {
+            color: var(--text-color);
+            text-decoration: none;
+            cursor: pointer;
+        }
+        #reader {
+            width: 100%;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        #scan-result {
+            margin-top: 15px;
+            font-weight: bold;
+            color: #28a745;
+            word-break: break-all;
+        }
+
+        /* --- АДАПТИВНОСТЬ ДЛЯ МОБИЛЬНЫХ УСТРОЙСТВ --- */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+                align-items: flex-start; /* Чтобы прокрутка работала корректно на длинных страницах */
+            }
+            .profile-card {
+                padding: 20px;
+                max-width: 100%;
+                border-radius: 8px;
+            }
+            h2 {
+                font-size: 20px;
+                margin-bottom: 15px;
+            }
+            .avatar-container {
+                width: 100px;
+                height: 100px;
+            }
+            .upload-label {
+                font-size: 13px;
+                padding: 8px;
+            }
+            .btn {
+                padding: 14px; /* Кнопки повыше для пальцев */
+                font-size: 15px;
+                margin-top: 12px;
+            }
+            input[type="password"] {
+                padding: 14px;
+                font-size: 16px; /* Важно: 16px предотвращает зум на iOS */
+            }
+            .info-box {
+                padding: 10px;
+            }
+            .info-label, .info-value {
+                font-size: 13px;
+            }
+            .qr-scanner-btn {
+                top: 15px;
+                right: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="profile-card">
+    <!-- Кнопка сканера QR-кода -->
+    <button class="profile-menu-btn" onclick="openProfileQrModal('myCode')" title="Открыть QR-меню">
+        <svg viewBox="0 0 24 24">
+            <path d="M12 7a2 2 0 110-4 2 2 0 010 4zm0 9a2 2 0 110-4 2 2 0 010 4zm0 9a2 2 0 110-4 2 2 0 010 4z"/>
+        </svg>
+    </button>
+    <button class="qr-scanner-btn" onclick="openProfileQrModal('scan')" title="Сканировать QR-код">
+        <svg viewBox="0 0 24 24">
+            <path d="M3 3h6v2H5v4H3V3zm12 0h6v6h-2V5h-4V3zM3 15h2v4h4v2H3v-6zm18 0v6h-6v-2h4v-4h2z"/>
+        </svg>
+    </button>
+
+    <!-- Сообщения об успехе или ошибке -->
+    {% if success_msg == "password_success" %}
+    <div id="alert" class="alert-success">Пароль успешно обновлен!</div>
+    {% elif success_msg == "profile_success" %}
+    <div id="alert" class="alert-success">Профиль успешно сохранён!</div>
+    {% elif success_msg == "profile_error" %}
+    <div id="alert" class="alert-error">⚠️ Ошибка! Тег занят или введён неверно.</div>
+    {% elif success_msg == "phone_error" %}
+    <div id="alert" class="alert-error">⚠️ Этот номер уже привязан к другому аккаунту.</div>
+    {% elif success_msg == "error" %}
+    <div id="alert" class="alert-error">⚠️ Ошибка! Проверьте данные и повторите попытку.</div>
+    {% endif %}
+
+    <!-- АВАТАРКА -->
+    <div class="avatar-container">
+        {% if user and user.avatar %}
+        <!-- ДОБАВЛЕНО ?t={{ user.id }} ДЛЯ ЗАЩИТЫ ОТ КЭША БРАУЗЕРА -->
+        <img src="{{ user.avatar }}?t={{ user.id }}" class="avatar-img" alt="Аватар">
+        {% else %}
+        <img src="https://ui-avatars.com/api/?name={{ username }}&background=random" class="avatar-img" alt="Аватар">
+        {% endif %}
+    </div>
+
+    <!-- ФОРМА ЗАГРУЗКИ -->
+    <form action="/upload-avatar" method="post" enctype="multipart/form-data" style="display:inline-block;">
+        <label for="file-input" class="upload-label"> 📷 Сменить фотографию</label>
+        <input id="file-input" type="file" name="file" style="display: none;" accept="image/*" onchange="this.form.submit()">
+    </form>
+
+    <h2>{{ username }}</h2>
+
+    <div class="profile-summary">
+        <div class="summary-row"><span class="summary-label">Тег:</span><span class="summary-value">{{ user.tag if user.tag else '@' ~ username }}</span></div>
+        <div class="summary-row"><span class="summary-label">Телефон:</span><span class="summary-value">{{ user.phone if user.phone else 'Не указан' }}</span></div>
+        <div class="summary-row"><span class="summary-label">О себе:</span><span class="summary-value">{{ user.bio if user.bio else 'Добавьте короткое био или статус.' }}</span></div>
+        <div class="summary-row"><span class="summary-label">Регистрация:</span><span class="summary-value">{{ stats.created_at.split(' ')[0] if stats.created_at else 'Не указано' }}</span></div>
+        <div class="summary-row"><span class="summary-label">Создано групп:</span><span class="summary-value">{{ stats.groups_created }}</span></div>
+        <div class="summary-row"><span class="summary-label">Групп в участии:</span><span class="summary-value">{{ stats.groups_joined }}</span></div>
+    </div>
+
+    <!-- ПЕРЕКЛЮЧАТЕЛЬ ТЕМЫ -->
+    <div class="theme-switch-wrapper">
+        <span style="color: var(--text-color); font-weight: bold;"> Тёмная тема</span>
+        <label class="theme-switch" for="checkbox">
+            <input type="checkbox" id="checkbox" />
+            <div class="slider"></div>
+        </label>
+    </div>
+
+    <div class="info-box">
+        <div class="info-row">
+            <span class="info-label">Логин:</span>
+            <span class="info-value">{{ username }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Статус:</span>
+            <span class="info-value" style="color: green;">Активен</span>
+        </div>
+    </div>
+
+    <form action="/update-profile" method="post" class="profile-edit-form">
+        <div class="info-box">
+            <div class="info-row">
+                <label class="info-label" for="tag">Уникальный тег:</label>
+                <input id="tag" type="text" name="tag" value="{{ user.tag if user.tag else '@' ~ username }}" class="text-input" placeholder="@ваш_тег">
+            </div>
+            <div class="info-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
+                <label class="info-label" for="phone">Телефон для поиска контактов:</label>
+                <input id="phone" type="tel" name="phone" value="{{ user.phone or '' }}" class="text-input" placeholder="+7 900 123-45-67" autocomplete="tel" inputmode="tel">
+                <small>Номер будет виден только для поиска аккаунта по контакту.</small>
+            </div>
+            <div class="info-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
+                <label class="info-label" for="bio">О себе:</label>
+                <textarea id="bio" name="bio" class="text-area" placeholder="Напишите несколько слов о себе...">{{ user.bio or '' }}</textarea>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-save">Сохранить профиль</button>
+    </form>
+
+    <div class="btn-group">
+        <button class="btn btn-change" onclick="document.getElementById('edit-form').style.display='block'">  Изменить пароль</button>
+
+        <div id="edit-form" class="edit-password-form">
+            <form action="/update-password" method="post">
+                <input type="password" name="new_password" placeholder="Новый пароль (мин. 6 символов)" minlength="6" required>
+                <button type="submit" class="btn btn-save">Сохранить новый пароль</button>
+            </form>
+        </div>
+
+        <a href="/profile" class="btn btn-back">← В личный кабинет</a>
+        <a href="/logout" class="btn btn-logout">  Выйти из аккаунта</a>
+    </div>
+</div>
+
+<!-- Модальное окно для профиля QR-кода -->
+<div id="profileQrModal" class="profile-qr-modal">
+    <div class="profile-qr-content">
+        <span class="close-profile-qr" onclick="closeProfileQrModal()">&times;</span>
+        <div class="qr-modal-header">
+            <div class="qr-user-info">
+                {% if user and user.avatar %}
+                <img src="{{ user.avatar }}?t={{ user.id }}" class="qr-mini-avatar" alt="Аватар">
+                {% else %}
+                <img src="https://ui-avatars.com/api/?name={{ username }}&background=random" class="qr-mini-avatar" alt="Аватар">
+                {% endif %}
+                <div class="qr-user-text">
+                    <div class="qr-user-name">{{ username }}</div>
+                    <div class="qr-user-subtitle">Ваш личный QR для чата</div>
+                </div>
+            </div>
+            <button class="qr-thumb-button" onclick="switchQrTab('myCode')" title="Посмотреть мой код">
+                <img id="profileQrThumb" src="/generate-user-qr/{{ username }}" alt="QR код">
+            </button>
+        </div>
+
+        <div class="share-action" onclick="shareQrLink()" title="Поделиться QR-ссылкой">
+            <span>Поделиться QR-ссылкой</span>
+            <span class="share-icon">🔗</span>
+        </div>
+
+        <div class="tab-bar">
+            <div id="tab-myCode" class="tab tab-active" onclick="switchQrTab('myCode')">Мой код</div>
+            <div id="tab-scan" class="tab" onclick="switchQrTab('scan')">Сканировать QR-код</div>
+        </div>
+
+        <div id="myCodePanel" class="tab-panel active">
+            <img src="/generate-user-qr/{{ username }}" alt="QR код" class="qr-large">
+            <div class="qr-link-box" id="profileQrLink"></div>
+            <div class="qr-action-text">Отсканируйте QR или отправьте ссылку, чтобы сразу открыть чат с этим пользователем.</div>
+        </div>
+
+        <div id="scanPanel" class="tab-panel">
+            <div id="reader"></div>
+            <div id="scan-result"></div>
+            <div class="qr-action-text">Откройте камеру и наведите на чужой QR-код. После сканирования вы перейдёте по ссылке.</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- ЛОГИКА ЕДИНОЙ ТЕМЫ ДЛЯ ВСЕГО САЙТА ---
+
+    // 1. Проверяем сохраненную тему СРАЗУ при загрузке скрипта (до полной отрисовки страницы)
+    const currentTheme = localStorage.getItem('theme');
+    if (currentTheme) {
+        document.body.classList.add(currentTheme);
+    }
+
+    // 2. Находим переключатель
+    const toggleSwitch = document.querySelector('.theme-switch input[type="checkbox"]');
+
+    // 3. Если тема темная, ставим галочку в переключателе
+    if (currentTheme === 'dark-theme') {
+        if (toggleSwitch) toggleSwitch.checked = true;
+    }
+
+    // 4. Функция переключения
+    function switchTheme(e) {
+        if (e.target.checked) {
+            document.body.classList.add('dark-theme');
+            localStorage.setItem('theme', 'dark-theme');
+        } else {
+            document.body.classList.remove('dark-theme');
+            localStorage.setItem('theme', 'light-theme');
+        }
+    }
+
+    // 5. Вешаем событие на переключатель
+    if (toggleSwitch) {
+        toggleSwitch.addEventListener('change', switchTheme);
+    }
+
+    // Скрипт исчезновения уведомления
+    window.onload = function() {
+        var alertBox = document.getElementById('alert');
+        if (alertBox) {
+            setTimeout(function() {
+                alertBox.style.opacity = '0';
+                setTimeout(function() { alertBox.style.display = 'none'; }, 500);
+            }, 4000);
+        }
+    };
+
+    // --- ЛОГИКА СКАНЕРА QR-КОДОВ ---
+    let html5QrcodeScanner;
+
+    function openProfileQrModal(initialTab = 'myCode') {
+        document.getElementById('profileQrModal').style.display = 'block';
+        const qrLink = `${window.location.origin}/dashboard?private=${encodeURIComponent('{{ username }}')}`;
+        document.getElementById('profileQrLink').innerText = qrLink;
+        switchQrTab(initialTab);
+    }
+
+    function closeProfileQrModal() {
+        document.getElementById('profileQrModal').style.display = 'none';
+        stopProfileQrScanner();
+    }
+
+    function switchQrTab(tab) {
+        const myCodePanel = document.getElementById('myCodePanel');
+        const scanPanel = document.getElementById('scanPanel');
+        const tabMyCode = document.getElementById('tab-myCode');
+        const tabScan = document.getElementById('tab-scan');
+
+        if (tab === 'scan') {
+            myCodePanel.classList.remove('active');
+            scanPanel.classList.add('active');
+            tabMyCode.classList.remove('tab-active');
+            tabScan.classList.add('tab-active');
+            startProfileQrScanner();
+        } else {
+            scanPanel.classList.remove('active');
+            myCodePanel.classList.add('active');
+            tabScan.classList.remove('tab-active');
+            tabMyCode.classList.add('tab-active');
+            stopProfileQrScanner();
+        }
+    }
+
+    async function shareQrLink() {
+        const qrLink = `${window.location.origin}/dashboard?private=${encodeURIComponent('{{ username }}')}`;
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: 'Мой QR для чата',
+                    text: 'Перейдите в чат со мной',
+                    url: qrLink
+                });
+                return;
+            } catch (err) {
+                console.warn('Share cancelled или ошибка', err);
+            }
+        }
+        try {
+            await navigator.clipboard.writeText(qrLink);
+            alert('Ссылка скопирована в буфер обмена');
+        } catch (err) {
+            prompt('Скопируйте ссылку вручную:', qrLink);
+        }
+    }
+
+    function startProfileQrScanner() {
+        document.getElementById('scan-result').innerText = '';
+        if (html5QrcodeScanner) {
+            stopProfileQrScanner();
+        }
+        html5QrcodeScanner = new Html5Qrcode('reader');
+        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+        html5QrcodeScanner.start(
+            { facingMode: 'environment' },
+            config,
+            onScanSuccess,
+            onScanFailure
+        ).catch(err => {
+            console.error(`Ошибка запуска сканера: ${err}`);
+            document.getElementById('scan-result').innerText = 'Не удалось получить доступ к камере. Проверьте разрешения.';
+        });
+    }
+
+    function stopProfileQrScanner() {
+        if (html5QrcodeScanner) {
+            html5QrcodeScanner.stop().then(() => {
+                html5QrcodeScanner.clear();
+                html5QrcodeScanner = null;
+            }).catch(err => {
+                console.log(`Ошибка остановки сканера: ${err}`);
+                html5QrcodeScanner = null;
+            });
+        }
+    }
+
+    function onScanSuccess(decodedText, decodedResult) {
+        console.log(`Код отсканирован: ${decodedText}`);
+        document.getElementById('scan-result').innerText = `Переход по ссылке: ${decodedText}`;
+        stopProfileQrScanner();
+        setTimeout(() => {
+            window.location.href = decodedText;
+        }, 1000);
+    }
+
+    function onScanFailure(error) {
+        // ничего не делаем, сканер продолжает искать код
+    }
+
+    // Закрытие модального окна при клике вне её области
+    window.onclick = function(event) {
+        const modal = document.getElementById('profileQrModal');
+        if (event.target == modal) {
+            closeProfileQrModal();
+        }
+    }
+</script>
+</body>
+</html>
